@@ -13,10 +13,17 @@ import java.util.Scanner;
  * @date 2020/09/18
  */
 public class FileClient {
-
+    /**
+     * TCP 端口号
+     */
     static final int TCP_PORT = 2020;
+    /**
+     * UDP端口号
+     */
     static final int UDP_PORT = 2021;
-
+    /**
+     * 服务器IP地址
+     */
     static final String REMOTE_HOST = "127.0.0.1";
     /**
      * TCP 的 socket
@@ -26,11 +33,11 @@ public class FileClient {
      * UDP 的 socket
      */
     DatagramSocket datagramSocket = new DatagramSocket();
-    //SocketAddress socketAddressUDP = new InetSocketAddress(REMOTE_HOST, UDP_PORT);
     /**
      * 本机IP地址
      */
     public String LOCAL_IP_ADDRESS;
+
     /**
      * 本机端口
      */
@@ -40,7 +47,7 @@ public class FileClient {
      */
     String serverPath;
     /**
-     * path为下载文件的保存目录
+     * path为下载文件的保存目录 ，默认路径为C:\Users\zl\Desktop\test
      */
     public String PATH = "C:\\Users\\zl\\Desktop\\test";
 
@@ -48,7 +55,6 @@ public class FileClient {
      * 每个包的大小
      */
     int PACKET_SIZE = 9216;
-
     /**
      * 输入 用于发送数据
      */
@@ -57,7 +63,13 @@ public class FileClient {
      * 输出  用于接收数据
      */
     public BufferedReader br;
+    /**
+     * 装饰后的输入，用于发送数据
+     */
     public PrintWriter pw;
+    /**
+     * 本机输入数据
+     */
     public Scanner in;
 
     /**
@@ -83,21 +95,25 @@ public class FileClient {
      * @throws UnknownHostException
      */
     public FileClient() throws IOException, UnknownHostException {
+        //TCP连接的地址打包
         InetSocketAddress socketAddress = new InetSocketAddress(REMOTE_HOST, TCP_PORT);
+        //如果下载文件夹不存在，创建一个  默认路径为C:\Users\zl\Desktop\test
         File dir = new File(PATH);
         if (!dir.exists()) {
             dir.mkdirs();
         }
+        //连接到服务器，10s没连接上就结束
         socket.connect(socketAddress, 10000);
         //初始化本地IP地址
         InetAddress ia = InetAddress.getLocalHost();
         LOCAL_IP_ADDRESS = ia.getHostAddress();
+
         initStream();
 
-        //socket.connect(new InetSocketAddress(REMOTE_HOST, TCP_PORT));
     }
 
     /**
+     * 客户端的主要实现方法
      * @throws IOException
      */
     public void send() throws IOException {
@@ -106,10 +122,12 @@ public class FileClient {
             //连接成功后,先发送一个获取客户端端口号的请求
             pw.println("PortRequest");
             LOCAL_PORT = Integer.parseInt(br.readLine());
+            //再发送一个请求服务器默认路径的请求
             pw.println("CurrentPath");
             serverPath = br.readLine();
-
+            //msg为收到的信息
             String msg;
+
             System.out.println("Local IP address： " + LOCAL_IP_ADDRESS + "  Port number：" + LOCAL_PORT + "    Connect Success！");
             System.out.println("*******************The list of available orders**********************");
             System.out.println("[1] ls\t\t\t\tThe server will return the list of the current directory");
@@ -119,10 +137,8 @@ public class FileClient {
             System.out.println("[5] bye\t\t\t\tDisconnect with the server");
             System.out.println("*********************************************************************");
 
-
             System.out.print(serverPath + ">>");
             while ((msg = in.nextLine()) != null) {
-
 
                 //发送命令
                 String order = msg.split(" ")[0];
@@ -142,13 +158,19 @@ public class FileClient {
                         break;
                     }
                     case "setting": {
+                        while (true){
                         System.out.println("Please input new directory path：");
                         PATH = in.nextLine();
                         File dir = new File(PATH);
                         if (!dir.exists()) {
-                            dir.mkdirs();
+                            if(!dir.mkdirs()){
+                                //如果创建没成功
+                                System.out.println("Wrong directory path!");
+                                continue;
+                            }
                         }
-                        //TODO 这里要判断目录是否合法
+                        break;
+                        }
                         System.out.println("The new download file path is " + PATH);
                         break;
                     }
@@ -163,13 +185,13 @@ public class FileClient {
 
                     }
                 }
-                // System.out.println(msg);
-                // pw.println(msg);
-                // System.out.println(br.readLine());
                 System.out.print(serverPath + ">>");
 
             }
-
+            br.close();
+            bw.close();
+            pw.close();
+            in.close();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -187,7 +209,7 @@ public class FileClient {
      * 判断路径在服务器端是否存在
      *
      * @param path 需要判断的路径
-     * @return
+     * @return 路径是否存在，true是存在
      */
     public boolean pathIsLegal(String path) {
         pw.println("check " + path);
@@ -219,6 +241,7 @@ public class FileClient {
         }
         //cd 绝对路径
         if (targetPath.lastIndexOf(":") != -1) {
+
             if (!"\\".equals(targetPath.substring(targetPath.length() - 1, targetPath.length()))) {
                 targetPath = targetPath + "\\";
             }
@@ -250,13 +273,15 @@ public class FileClient {
      * @param filePath    保存文件的目录
      */
     public void getOrder(String currentPath, String targetPath, String filePath) {
-
+        //downloadFilePath为下载文件在本地的保存地址
         String downloadFilePath;
         if (targetPath.contains(":")) {
+            //如果是用的绝对地址
             pw.println("get " + targetPath);
             downloadFilePath = targetPath;
 
         } else {
+            //如果是相对地址
             pw.println("get " + currentPath + "\\" + targetPath);
             downloadFilePath = filePath + "\\" + targetPath;
         }
@@ -290,7 +315,7 @@ public class FileClient {
                 System.out.println("download " + currentPath + "\\" + targetPath + " to " +
                         filePath + "\\" + targetPath + " success!");
             } else {
-                System.out.println(targetPath + "do not exist");
+                System.out.println(targetPath + " do not exist");
             }
 
         } catch (IOException e) {

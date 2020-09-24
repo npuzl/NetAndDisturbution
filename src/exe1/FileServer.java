@@ -1,7 +1,6 @@
 package exe1;
 
 import java.io.*;
-import java.net.DatagramSocket;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -10,10 +9,9 @@ import java.util.concurrent.Executors;
 
 /**
  * 文件服务程序，服务端
- *
  * @author zl
- * @version 1.0
- * @date 2020/09/18
+ * @version 1.5
+ * @date 2020/09/24
  */
 public class FileServer {
     /**
@@ -72,12 +70,10 @@ public class FileServer {
 
                 socket = serverSocket.accept();
                 String client = socket.getInetAddress() + ":" + socket.getPort();
-                //System.out.println(client);
                 if (!IN_LINK_CLIENT.contains(client)) {
                     System.out.println("new connection from " + client);
                     IN_LINK_CLIENT.add(client);
                 }
-
                 executorService.execute(new Handler(socket, path));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -92,8 +88,7 @@ public class FileServer {
      * @param args 根目录
      */
     public static void main(String[] args) {
-        boolean flag = true;
-        while (flag) {
+        while (true) {
 
             //当传入多个参数或者没传入参数，都重新输入
             if (args.length != 1) {
@@ -105,7 +100,7 @@ public class FileServer {
             }
 
             rootFile = new File(args[0]);
-            //文件不存在或者不是一个目录
+            //文件夹不存在或者不是一个目录
             if (!rootFile.exists() || !rootFile.isDirectory()) {
                 System.out.println(rootFile.getAbsolutePath() + " is not a legal path,please enter again:");
                 Scanner in = new Scanner(System.in);
@@ -113,7 +108,7 @@ public class FileServer {
                 args = s.split(" ");
                 continue;
             }
-            flag = false;
+            break;
         }
 
         System.out.println("Current file path is : " + rootFile.getAbsolutePath());

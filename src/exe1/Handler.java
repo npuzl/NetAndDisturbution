@@ -107,10 +107,10 @@ public class Handler implements Runnable {
                         for (String fileName : fileNames) {
                             File tempFile = new File(requestPath + "\\" + fileName);
                             if (tempFile.isDirectory()) {
-                                pw.printf("%-100s%-18s%-1s\n", fileName, "<directory>", "");
+                                pw.printf("%-18s%-18s%-100s\n","<directory>","",fileName);
 
                             } else {
-                                pw.printf("%-100s%-18s%-1s\n", fileName, "<file>", tempFile.length() + "Byte");
+                                pw.printf("%-18s%-18s%-100s\n","<file>",tempFile.length() + "Byte", fileName );
                             }
                         }
                         break;
@@ -127,14 +127,14 @@ public class Handler implements Runnable {
                         break;
                     }
                     case "cd": {
-                        System.out.println(remote + "cd " + orders[1]);
+                        System.out.println(remote + " cd " + orders[1]);
                         break;
                     }
                     //get 命令
                     case "get": {
 
 
-                        System.out.println(remote + "get" + orders[1]);
+                        System.out.println(remote + " get" + orders[1]);
 
                         File file = new File(orders[1]);
                         if (file.exists()) {
