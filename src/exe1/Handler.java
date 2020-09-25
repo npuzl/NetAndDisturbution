@@ -7,8 +7,8 @@ import java.net.*;
  * 多线程的主要实现类
  *
  * @author zl
- * @version 1.4
- * @date 2020/09/20
+ * @version 2.0
+ * @date 2020/09/24
  */
 public class Handler implements Runnable {
     /**
@@ -75,7 +75,7 @@ public class Handler implements Runnable {
 
             while ((info = br.readLine()) != null) {
                 //将收到的信息用空格分割，第一段为命令，第二段为目录
-                String[] orders = info.split(" ");
+                String[] orders = info.split(" ", 2);
                 //info为命令
                 info = orders[0];
                 //命令为返回端口号
@@ -107,10 +107,10 @@ public class Handler implements Runnable {
                         for (String fileName : fileNames) {
                             File tempFile = new File(requestPath + "\\" + fileName);
                             if (tempFile.isDirectory()) {
-                                pw.printf("%-18s%-18s%-100s\n","<directory>","",fileName);
+                                pw.printf("%-18s%-18s%-100s\n", "<directory>", "", fileName);
 
                             } else {
-                                pw.printf("%-18s%-18s%-100s\n","<file>",tempFile.length() + "Byte", fileName );
+                                pw.printf("%-18s%-18s%-100s\n", "<file>", tempFile.length() + "Byte", fileName);
                             }
                         }
                         break;
@@ -119,7 +119,7 @@ public class Handler implements Runnable {
                     //check 命令，判断路径是否合法
                     case "check": {
                         File file = new File(orders[1]);
-                        if (file.exists()) {
+                        if (file.exists() && file.isDirectory()) {
                             pw.println("true");
                         } else {
                             pw.println("false");
@@ -128,16 +128,22 @@ public class Handler implements Runnable {
                     }
                     case "cd": {
                         System.out.println(remote + " cd " + orders[1]);
+
                         break;
                     }
                     //get 命令
                     case "get": {
 
 
-                        System.out.println(remote + " get" + orders[1]);
+                        System.out.println(remote + "get " + orders[1]);
 
                         File file = new File(orders[1]);
+
                         if (file.exists()) {
+                            if (file.isDirectory()) {
+                                pw.println("notFile");
+                                break;
+                            }
                             File downloadFile = new File(orders[1]);
 
                             long length = downloadFile.length();
@@ -148,16 +154,23 @@ public class Handler implements Runnable {
                             DatagramPacket datagramPacket;
 
 
-                            byte[] sendPacket = new byte[PACKET_SIZE];
-
-                            datagramPacket = new DatagramPacket(sendPacket, sendPacket.length, new InetSocketAddress("127.0.0.1", UDP_PORT));
+                            int time = 0;
+                            long packetLength = Math.min(length, PACKET_SIZE);
+                            time++;
+                            byte[] sendPacket = new byte[Math.toIntExact(packetLength)];
                             BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
 
                             //发包
                             while (bufferedInputStream.read(sendPacket) != -1) {
+
+                                datagramPacket = new DatagramPacket(sendPacket, sendPacket.length, new InetSocketAddress("127.0.0.1", UDP_PORT));
                                 datagramPacket.setData(sendPacket);
                                 datagramsocket.send(datagramPacket);
-                                sendPacket = new byte[PACKET_SIZE];
+                                packetLength = PACKET_SIZE > (length - (time) * PACKET_SIZE) ? (length - time * PACKET_SIZE) : PACKET_SIZE;
+                                time++;
+                                if (packetLength > 0) {
+                                    sendPacket = new byte[Math.toIntExact(packetLength)];
+                                }
                                 Thread.sleep(1);
                             }
                             bufferedInputStream.close();
@@ -172,6 +185,7 @@ public class Handler implements Runnable {
                     case "bye": {
 
                         System.out.println(remote + "Disconnect");
+                        //socket.close();
                         break;
                     }
                     default: {
@@ -182,6 +196,12 @@ public class Handler implements Runnable {
 
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

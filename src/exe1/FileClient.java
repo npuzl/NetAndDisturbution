@@ -9,8 +9,8 @@ import java.util.Scanner;
  * 文件服务程序，客户端
  *
  * @author zl
- * @version 1.0
- * @date 2020/09/18
+ * @version 2.0
+ * @date 2020/09/24
  */
 public class FileClient {
     /**
@@ -54,7 +54,7 @@ public class FileClient {
     /**
      * 每个包的大小
      */
-    int PACKET_SIZE = 9216;
+    int PACKET_SIZE = 8 * 1024;
     /**
      * 输入 用于发送数据
      */
@@ -114,6 +114,7 @@ public class FileClient {
 
     /**
      * 客户端的主要实现方法
+     *
      * @throws IOException
      */
     public void send() throws IOException {
@@ -141,7 +142,7 @@ public class FileClient {
             while ((msg = in.nextLine()) != null) {
 
                 //发送命令
-                String order = msg.split(" ")[0];
+                String order = msg.split(" ", 2)[0];
 
                 switch (order) {
 
@@ -150,26 +151,26 @@ public class FileClient {
                         break;
                     }
                     case "cd": {
-                        cdOrder(msg.split(" ")[1]);
+                        cdOrder(msg.split(" ", 2)[1]);
                         break;
                     }
                     case "get": {
-                        getOrder(serverPath, msg.split(" ")[1], PATH);
+                        getOrder(serverPath, msg.split(" ", 2)[1], PATH);
                         break;
                     }
                     case "setting": {
-                        while (true){
-                        System.out.println("Please input new directory path：");
-                        PATH = in.nextLine();
-                        File dir = new File(PATH);
-                        if (!dir.exists()) {
-                            if(!dir.mkdirs()){
-                                //如果创建没成功
-                                System.out.println("Wrong directory path!");
-                                continue;
+                        while (true) {
+                            System.out.println("Please input new directory path：");
+                            PATH = in.nextLine();
+                            File dir = new File(PATH);
+                            if (!dir.exists()) {
+                                if (!dir.mkdirs()) {
+                                    //如果创建没成功
+                                    System.out.println("Wrong directory path!");
+                                    continue;
+                                }
                             }
-                        }
-                        break;
+                            break;
                         }
                         System.out.println("The new download file path is " + PATH);
                         break;
@@ -249,7 +250,7 @@ public class FileClient {
                 serverPath = targetPath;
                 pw.println("cd " + serverPath);
             } else {
-                System.out.println("Error:" + targetPath + "do not exist");
+                System.out.println("Error: directory " + targetPath + "do not exist");
             }
             return;
         }
@@ -260,7 +261,7 @@ public class FileClient {
             serverPath = serverPath + "\\" + targetPath;
             pw.println("cd " + serverPath);
         } else {
-            System.out.println("Error:" + serverPath + "\\" + targetPath + " do not exist");
+            System.out.println("Error: directory " + serverPath + "\\" + targetPath + " do not exist");
         }
 
     }
@@ -287,6 +288,10 @@ public class FileClient {
         }
         try {
             String request = br.readLine();
+            if ("notFile".equals(request)) {
+                System.out.println("Can not download directory!");
+                return;
+            }
             if (!"false".equals(request)) {
                 //包的总大小
                 double packetSize = Double.parseDouble(request);
@@ -297,7 +302,9 @@ public class FileClient {
 
                 System.out.println("start to download file");
                 File downloadFile = new File(downloadFilePath);
-                downloadFile.createNewFile();
+                if (!downloadFile.createNewFile()) {
+                    System.out.println("Can not make a new file");
+                }
                 FileOutputStream fileOutputStream = new FileOutputStream(downloadFile);
 
                 for (int i = 0; i < Math.ceil(packetSize / PACKET_SIZE); i++) {
@@ -306,7 +313,9 @@ public class FileClient {
                     receivePacket = datagramPacket.getData();
                     fileOutputStream.write(receivePacket, 0, datagramPacket.getLength());
                     fileOutputStream.flush();
-                    System.out.println("download has finished " + 100 * (i + 1) / Math.ceil(packetSize / PACKET_SIZE) + "%");
+
+                    System.out.printf("download has finished %.2f %%\n", 100 * (i + 1) / Math.ceil(packetSize / PACKET_SIZE));
+
 
                 }
                 datagramSocket.close();
@@ -345,6 +354,7 @@ public class FileClient {
     public static void main(String[] args) {
         try {
             new FileClient().send();
+
         } catch (IOException e) {
             e.printStackTrace();
         }
