@@ -9,9 +9,10 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Class <em>Client</em> is a class representing a simple HTTP client.
- * @date 2020/10/09
+ *
+ * @author wben, zl
  * @version 1.0
- * @author wben,zl
+ * @date 2020/10/09
  */
 
 public class Client {
