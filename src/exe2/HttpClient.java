@@ -3,6 +3,9 @@ package exe2;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
+
+import static java.lang.Thread.sleep;
 
 /**
  * Class <em>HttpClient</em> is a class representing a simple HTTP client.
@@ -106,23 +109,16 @@ public class HttpClient {
         /**
          * Send the request to the server.
          */
-        request += " / HTTP/1.1" + CRLF;
+        request += " HTTP/1.1" + CRLF;
         request += "Host: www.nwpu.edu.cn" + CRLF;
         request += "Connection: keep-alive" + CRLF;
         request += "Upgrade-Insecure-Requests: 1" + CRLF;
         request += "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36" + CRLF;
         request += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" + CRLF;
-
-        request += "Sec-Fetch-Site: none" + CRLF;
-        request += "Sec-Fetch-Mode: navigate" + CRLF;
-        request += "Sec-Fetch-User: ?1" + CRLF;
-        request += "Sec-Fetch-Dest: document" + CRLF;
-        request += "Accept-Encoding: gzip, deflate, br" + CRLF;
-
-        request += "Accept-Language: zh,zh-CN;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6" + CRLF;
-
+        //request += "Accept-Encoding: gzip, deflate, br" + CRLF;
+        //request += "Accept-Language: zh,zh-CN;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6" + CRLF;
         request += CRLF;
-        System.out.println(request);
+        //System.out.println(request);
         buffer = request.getBytes();
         ostream.write(buffer, 0, request.length());
         ostream.flush();
@@ -166,42 +162,37 @@ public class HttpClient {
                 default:
                     last = c;
                     header.append((char) c);
-                    System.out.print((char) c);
+                    //System.out.print((char) c);
             }
         }
-
-        /**
-         * Read the contents and add it to the response StringBuffer.
-         */
+        //如果200OK了
+        String head=new String(header);
+        if(head.contains("200 OK")) {
+            /**
+             * Read the contents and add it to the response StringBuffer.
+             */
 /*
         while (istream.read(buffer) != -1) {
 
             response.append(new String(buffer, StandardCharsets.ISO_8859_1));
         }
         System.out.println(response);*/
-        /*
-        System.out.println("\n Header is done");
-        String data;
-        FileWriter f = new FileWriter("a.html", true);
-        while ((data = br.readLine()) != null) {
-            System.out.println(data);
-            f.write(data);
-        }*/
 
-
-        int count = 0;
-        while (istream.read(buffer)!=-1) {
-            count++;
+            while (istream.read(buffer) != -1) {
             /*
             for(byte b:buffer){
                 System.out.print((char)b);
                 response.append((char)b);
             }*/
-            String temp=new String(buffer, StandardCharsets.UTF_8);
-            System.out.print(temp);
-            response.append(temp);
+                String temp = new String(buffer, StandardCharsets.ISO_8859_1);
+                if (temp.contains("</BODY></HTML>")) {
+                    response.append(temp.substring(0, temp.lastIndexOf("</BODY></HTML>") + "</BODY></HTML>".length()));
+                    break;
+                } else {
+                    response.append(temp);
+                }
+            }
         }
-
 
     }
 

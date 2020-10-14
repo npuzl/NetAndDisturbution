@@ -97,22 +97,26 @@ public class Client {
             screen.flush();
 
             if (request.startsWith("GET")) {
-                /**
-                 * Ask the user to input a name to save the GET resultant web page.
-                 */
-                screen.println();
-                screen.print("Enter the name of the file to save: ");
-                screen.flush();
-                String filename = keyboard.readLine();
-                FileOutputStream outfile = new FileOutputStream(filename);
+                if (myClient.getHeader().contains("200 OK")) {
+                    /**
+                     * Ask the user to input a name to save the GET resultant web page.
+                     */
+                    screen.println();
+                    screen.print("Enter the name of the file to save: ");
+                    screen.flush();
+                    String filename = keyboard.readLine();
+                    FileOutputStream outfile = new FileOutputStream(filename);
 
-                /**
-                 * Save the response to the specified file.
-                 */
-                String response = myClient.getResponse();
-                outfile.write(response.getBytes(StandardCharsets.ISO_8859_1));
-                outfile.flush();
-                outfile.close();
+                    /**
+                     * Save the response to the specified file.
+                     */
+                    String response = myClient.getResponse();
+                    outfile.write(response.getBytes(StandardCharsets.ISO_8859_1));
+                    outfile.flush();
+                    outfile.close();
+                } else {
+                    screen.println("Bad Request!");
+                }
             }
 
             /*
