@@ -61,7 +61,6 @@ public class HttpClient {
      * StringBuffer storing the response.
      */
     private StringBuffer response = null;
-    BufferedReader br;
     /**
      * String to represent the Carriage Return and Line Feed character sequence.
      */
@@ -97,9 +96,6 @@ public class HttpClient {
          * Create the input stream.  接收
          */
         istream = new BufferedInputStream(socket.getInputStream());
-
-
-        br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
     }
 
     /**
@@ -118,7 +114,6 @@ public class HttpClient {
         //request += "Accept-Encoding: gzip, deflate, br" + CRLF;
         //request += "Accept-Language: zh,zh-CN;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6" + CRLF;
         request += CRLF;
-        //System.out.println(request);
         buffer = request.getBytes();
         ostream.write(buffer, 0, request.length());
         ostream.flush();
@@ -128,13 +123,61 @@ public class HttpClient {
         processResponse();
     }
 
+    public String getContentType(String fileName) {
+        if (fileName.endsWith(".jpg") || fileName.endsWith("jpeg")) {
+            return "image/jpeg";
+        }
+        if (fileName.endsWith(".txt"))
+            return "ext/plain";
+        if (fileName.endsWith(".html"))
+            return "text/html";
+        if (fileName.endsWith(".json"))
+            return "application/json";
+        if (fileName.endsWith(".pdf"))
+            return "application/pdf";
+        return "application/octet-stream";
+    }
+
     /**
      * <em>processPutRequest</em> process the input PUT request.
      */
     public void processPutRequest(String request) throws Exception {
         //=======start your job here============//
+        String Path = request.split(" ")[1];
+        String path = Path;
+        if (path.startsWith("/")) {
+            //为相对路径时
+            path = System.getProperty("user.dir") + "/." + path;
+        }
+        File file = new File(path);
+        if (!file.exists()) {
+            System.err.println("File path ERROR!");
+            return;
+        }
+        request = "PUT " + Path + " HTTP/1.1" + CRLF;
+        request += "Host: www.nwpu.edu.cn" + CRLF;
+        request += "ContentType: " + getContentType(path) + CRLF;
+        request += "Accept-Charset: ISO_8859_1" + CRLF;
+        request += "X-Auth-Token: token" + CRLF;
+        request += "Connection: keep-alive" + CRLF;
+        request += "Content-Length: " + file.length() + CRLF;
+        request += CRLF;
+        System.out.println(request);
 
+        buffer = request.getBytes(StandardCharsets.UTF_8);
+        ostream.write(buffer, 0, request.length());
+        ostream.flush();
+        System.out.println("request send to server success!");
 
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
+        byte[] fileData = new byte[buffer_size];
+        int size = 0;
+        while ((size = bufferedInputStream.read(fileData)) != -1) {
+            ostream.write(fileData, 0, size);
+            ostream.flush();
+        }
+
+        processResponse();
         //=======end of your job============//
     }
 
@@ -166,34 +209,16 @@ public class HttpClient {
             }
         }
         //如果200OK了
-        String head=new String(header);
-        if(head.contains("200 OK")) {
-            /**
-             * Read the contents and add it to the response StringBuffer.
-             */
-/*
-        while (istream.read(buffer) != -1) {
-
-            response.append(new String(buffer, StandardCharsets.ISO_8859_1));
-        }
-        System.out.println(response);*/
-
+        String head = new String(header);
+        if (head.contains("200 OK")) {
             while (istream.read(buffer) != -1) {
-            /*
-            for(byte b:buffer){
-                System.out.print((char)b);
-                response.append((char)b);
-            }*/
                 String temp = new String(buffer, StandardCharsets.ISO_8859_1);
-                if (temp.contains("</BODY></HTML>")) {
-                    response.append(temp.substring(0, temp.lastIndexOf("</BODY></HTML>") + "</BODY></HTML>".length()));
+                response.append(temp);
+                buffer = new byte[buffer_size];
+                if (istream.available() == 0)
                     break;
-                } else {
-                    response.append(temp);
-                }
             }
         }
-
     }
 
     /**

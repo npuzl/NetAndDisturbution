@@ -68,7 +68,6 @@ public class Client {
              */
             screen.println(args[0] + " is listening to your request:");
             String request = keyboard.readLine();
-
             if (request.startsWith("GET")) {
                 /**
                  * Ask the client to process the GET request.
