@@ -3,7 +3,9 @@ package exe2;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Objects;
+import java.util.Set;
 
 import static java.lang.Thread.sleep;
 
@@ -18,14 +20,9 @@ import static java.lang.Thread.sleep;
 public class HttpClient {
 
     /**
-     * default HTTP port is port 80
-     */
-    private static final int port = 80;
-
-    /**
      * Allow a maximum buffer size of 8192 bytes
      */
-    private static final int buffer_size = 8192;
+    private static final int BUFFER_SIZE = 8192;
 
     /**
      * Response is stored in a byte array.
@@ -69,8 +66,10 @@ public class HttpClient {
     /**
      * HttpClient constructor;
      */
+    private ArrayList<byte[]> requestFile = null;
+
     public HttpClient() {
-        buffer = new byte[buffer_size];
+        buffer = new byte[BUFFER_SIZE];
         header = new StringBuffer();
         response = new StringBuffer();
     }
@@ -105,14 +104,12 @@ public class HttpClient {
         /**
          * Send the request to the server.
          */
-        request += " HTTP/1.1" + CRLF;
-        request += "Host: www.nwpu.edu.cn" + CRLF;
+        request += CRLF;
+        request += "Host: 127.0.0.1" + CRLF;
         request += "Connection: keep-alive" + CRLF;
-        request += "Upgrade-Insecure-Requests: 1" + CRLF;
+        //request += "Upgrade-Insecure-Requests: 1" + CRLF;
         request += "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36" + CRLF;
-        request += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" + CRLF;
-        //request += "Accept-Encoding: gzip, deflate, br" + CRLF;
-        //request += "Accept-Language: zh,zh-CN;q=0.9,en-US;q=0.8,en;q=0.7,zh-TW;q=0.6" + CRLF;
+        //request += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" + CRLF;
         request += CRLF;
         buffer = request.getBytes();
         ostream.write(buffer, 0, request.length());
@@ -120,22 +117,7 @@ public class HttpClient {
         /**
          * waiting for the response.
          */
-        processResponse();
-    }
-
-    public String getContentType(String fileName) {
-        if (fileName.endsWith(".jpg") || fileName.endsWith("jpeg")) {
-            return "image/jpeg";
-        }
-        if (fileName.endsWith(".txt"))
-            return "ext/plain";
-        if (fileName.endsWith(".html"))
-            return "text/html";
-        if (fileName.endsWith(".json"))
-            return "application/json";
-        if (fileName.endsWith(".pdf"))
-            return "application/pdf";
-        return "application/octet-stream";
+        processResponse(request);
     }
 
     /**
@@ -143,22 +125,33 @@ public class HttpClient {
      */
     public void processPutRequest(String request) throws Exception {
         //=======start your job here============//
-        String Path = request.split(" ")[1];
+        //Path为路径
+        String Path = request.split(" ", 3)[1];
+        if (!Path.contains(":") && !Path.startsWith("/")) {
+            //不是绝对路径 且不是以/开头
+            Path = "/" + Path;
+        }
+
         String path = Path;
         if (path.startsWith("/")) {
-            //为相对路径时
-            path = System.getProperty("user.dir") + "/." + path;
+            //为相对路径时,改为绝对路径
+            path = System.getProperty("user.dir") + path;
         }
+
+
         File file = new File(path);
+
+
+        System.out.println(file.getAbsolutePath());
         if (!file.exists()) {
             System.err.println("File path ERROR!");
             return;
         }
+
         request = "PUT " + Path + " HTTP/1.1" + CRLF;
-        request += "Host: www.nwpu.edu.cn" + CRLF;
-        request += "ContentType: " + getContentType(path) + CRLF;
+        request += "Host: 127.0.0.1" + CRLF;
+        request += "ContentType: " + SenderAndReceiver.getContentType(path) + CRLF;
         request += "Accept-Charset: ISO_8859_1" + CRLF;
-        request += "X-Auth-Token: token" + CRLF;
         request += "Connection: keep-alive" + CRLF;
         request += "Content-Length: " + file.length() + CRLF;
         request += CRLF;
@@ -168,64 +161,70 @@ public class HttpClient {
         ostream.write(buffer, 0, request.length());
         ostream.flush();
         System.out.println("request send to server success!");
-
-        BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
-        byte[] fileData = new byte[buffer_size];
-        int size = 0;
-        while ((size = bufferedInputStream.read(fileData)) != -1) {
-            ostream.write(fileData, 0, size);
-            ostream.flush();
+        if (SenderAndReceiver.sendFile(ostream, file)) {
+            System.out.println("发送文件成功");
         }
-
-        processResponse();
+        processResponse(request);
         //=======end of your job============//
     }
 
     /**
      * <em>processResponse</em> process the server response.
      */
-    public void processResponse() throws Exception {
-        int last = 0, c = 0;
-        /**
-         * Process the header and add it to the header StringBuffer.
-         */
-        boolean inHeader = true; // loop control
-        while (inHeader && ((c = istream.read()) != -1)) {
-            switch (c) {
-                case '\r':
-                    break;
-                case '\n':
-                    if (c == last) {
-                        inHeader = false;
-                        break;
-                    }
-                    last = c;
-                    header.append("\n");
-                    break;
-                default:
-                    last = c;
-                    header.append((char) c);
-                    //System.out.print((char) c);
-            }
-        }
+    public void processResponse(String request) throws Exception {
         //如果200OK了
-        String head = new String(header);
-        if (head.contains("200 OK")) {
-            while (istream.read(buffer) != -1) {
-                String temp = new String(buffer, StandardCharsets.ISO_8859_1);
-                response.append(temp);
-                buffer = new byte[buffer_size];
-                if (istream.available() == 0)
-                    break;
-            }
+
+        String head;
+        head = SenderAndReceiver.receiveHeader(istream);
+        assert head != null;
+        header = new StringBuffer(head);
+        if (Objects.equals(request.split("\n")[0].split(" ")[0], "GET") || !head.contains("200 OK")) {
+            //如果是GET方法   或者  是PUT方法且没返回200 OK
+            requestFile = SenderAndReceiver.receiveFile(istream, head);
         }
     }
+        /*
+        int contentLength = SenderAndReceiver.getContentLength(head);
+
+        ArrayList<byte[]> responseBytes=new ArrayList<byte[]>();
+
+
+        int bufferSize = Math.min(BUFFER_SIZE, contentLength);
+        if (BUFFER_SIZE < contentLength) {
+            contentLength = contentLength - BUFFER_SIZE;
+        }
+        buffer = new byte[bufferSize];
+
+        while (istream.read(buffer) != -1) {
+
+            responseBytes.add(buffer);
+            String temp = new String(buffer, StandardCharsets.ISO_8859_1);
+            response.append(temp);
+
+            if (istream.available() == 0)
+                break;
+            if (contentLength > BUFFER_SIZE) {
+                bufferSize = BUFFER_SIZE;
+                contentLength = contentLength - BUFFER_SIZE;
+            } else {
+                bufferSize = contentLength;
+            }
+
+            buffer = new byte[bufferSize];
+        }
+        */
+
+
 
     /**
      * Get the response header.
      */
     public String getHeader() {
         return header.toString();
+    }
+
+    public ArrayList<byte[]> getFile() {
+        return requestFile;
     }
 
     /**
@@ -238,6 +237,7 @@ public class HttpClient {
     /**
      * Close all open connections -- sockets and streams.
      */
+
     public void close() throws Exception {
         socket.close();
         istream.close();

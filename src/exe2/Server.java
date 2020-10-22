@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.Scanner;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -22,24 +20,20 @@ public class Server {
     ServerSocket serverSocket;
     private final int PORT = 80;
     private static File rootFile;
-    private ExecutorService executorService;
-    final int POOL_SIZE = 4;
+    private final ExecutorService executorService;
+    private static final int POOL_SIZE = 4;
     ArrayList<String> IN_LINK_CLIENT = new ArrayList<>();
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public Server() throws IOException {
         serverSocket = new ServerSocket(PORT, 2);
-        executorService = Executors.newFixedThreadPool(
-                Runtime.getRuntime().availableProcessors() * POOL_SIZE);
+        executorService = Executors.newFixedThreadPool(Runtime.getRuntime()
+                .availableProcessors() * POOL_SIZE);
         System.out.println("The server started successfully");
-        executorService.shutdown();
     }
 
     public void service(String path) {
         Socket socket;
-
-
-
         while (true) {
             try {
                 socket = serverSocket.accept();

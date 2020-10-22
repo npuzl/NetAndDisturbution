@@ -1,11 +1,8 @@
 package exe2;
 
-import java.io.BufferedReader;
-import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 
 /**
  * Class <em>Client</em> is a class representing a simple HTTP client.
@@ -91,31 +88,63 @@ public class Client {
             /**
              * Get the headers and display them.
              */
-            screen.println("Header: \n");
+            screen.println("Header: ");
             screen.print(myClient.getHeader() + "\n");
             screen.flush();
 
             if (request.startsWith("GET")) {
-                if (myClient.getHeader().contains("200 OK")) {
-                    /**
-                     * Ask the user to input a name to save the GET resultant web page.
-                     */
-                    screen.println();
-                    screen.print("Enter the name of the file to save: ");
-                    screen.flush();
-                    String filename = keyboard.readLine();
-                    FileOutputStream outfile = new FileOutputStream(filename);
+                /**
+                 * Ask the user to input a name to save the GET resultant web page.
+                 */
+                screen.println();
+                screen.print("Enter the name of the file to save: ");
+                screen.flush();
 
-                    /**
-                     * Save the response to the specified file.
-                     */
-                    String response = myClient.getResponse();
-                    outfile.write(response.getBytes(StandardCharsets.ISO_8859_1));
-                    outfile.flush();
-                    outfile.close();
-                } else {
-                    screen.println("Bad Request!");
+
+                String filename = keyboard.readLine();
+                String dirName = filename.split("\\.")[0];
+                File dir = new File(dirName);
+                if (!dir.mkdirs()) {
+                    System.out.println("文件夹创建失败");
                 }
+
+                File html = new File(dirName +"/"+ filename);
+                if ((!html.exists() && html.createNewFile()) || html.exists()) {
+                    /////
+                    ;
+                }
+                FileOutputStream outfile = new FileOutputStream(html);
+                /**
+                 * Save the response to the specified file.
+                 */
+                ArrayList<byte[]> fileBytes = myClient.getFile();
+                StringBuilder response = new StringBuilder();
+                for (byte[] b : fileBytes) {
+                    outfile.write(b);
+                    outfile.flush();
+                    response.append(new String(b));
+                }
+                outfile.close();
+
+                String[] resources = SenderAndReceiver.getResources(response.toString(), "img");
+
+                for (String r : resources) {
+                    //生成get
+                    String get = "GET " + r + "HTTP/1.1";
+                    myClient.processGetRequest(get);
+                    File file = new File(dirName + "/" + r);
+                    if ((!file.exists() && file.createNewFile()) || file.exists()) {
+                        FileOutputStream fos = new FileOutputStream(file);
+                        fileBytes = myClient.getFile();
+                        for (byte[] b : fileBytes) {
+                            fos.write(b);
+                            fos.flush();
+                        }
+                        fos.close();
+                    }
+                }
+
+
             }
 
             /*
