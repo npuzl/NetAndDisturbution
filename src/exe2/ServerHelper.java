@@ -30,7 +30,13 @@ public class ServerHelper implements Runnable {
      * 服务器的根目录地址 C:/../Desktop
      */
     String path;
+    /**
+     * 用于格式化显示日期
+     */
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    /**
+     * 远程端的不同字符串形式
+     */
     String remote;
     String Remote;
 
@@ -51,7 +57,7 @@ public class ServerHelper implements Runnable {
     }
 
     /**
-     * @param socket
+     * @param socket socket接口
      * @param path   为服务器目录
      */
     ServerHelper(Socket socket, String path) {
@@ -88,6 +94,10 @@ public class ServerHelper implements Runnable {
         }
     }
 
+    /**
+     * 处理GET请求
+     * @param request GET请求的字符串形式
+     */
     public void ProcessGetRequest(String request) {
 
         String requestPath = request.split(" ", 3)[1];
@@ -164,6 +174,10 @@ public class ServerHelper implements Runnable {
         }
     }
 
+    /**
+     * 处理PUT请求
+     * @param request PUT请求的字符串形式
+     */
     public void ProcessPutRequest(String request) {
         try {
 
