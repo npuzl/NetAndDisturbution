@@ -11,9 +11,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 
 /**
+ * 服务器类
  * @author zl
- * @version 1.0
- * @date 2020/10/12
+ * @version 3.0
+ * @date 2020/10/22
  */
 public class Server {
 

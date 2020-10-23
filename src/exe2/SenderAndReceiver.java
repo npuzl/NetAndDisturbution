@@ -1,14 +1,19 @@
 package exe2;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class SenderAndReceiver {
 
     private static final int BUFFER_SIZE = 8 * 1024;
 
+    /**
+     * 发送文件的方法
+     * @param ostream 输出用的字节流
+     * @param file 需要发送的文件
+     * @return 发送是否成功
+     * @throws IOException 读写异常
+     */
     public static boolean sendFile(BufferedOutputStream ostream, File file) throws IOException {
         try {
             FileInputStream fileInputStream = new FileInputStream(file);
@@ -35,8 +40,6 @@ public class SenderAndReceiver {
                     bufferSize = Math.toIntExact(contentLength);
                 }
                 buffer = new byte[bufferSize];
-
-
             }
             return true;
         } catch (IOException e) {
@@ -46,38 +49,29 @@ public class SenderAndReceiver {
         return false;
     }
 
+    /**
+     * 文件接收方法
+     * @param istream 用于发送的流
+     * @param head 请求头，用于获得文件长度
+     * @return 接收到的文件以字节数组列表的形式存储
+     * @throws IOException 读写异常
+     */
     public static ArrayList<byte[]> receiveFile(BufferedInputStream istream,String head) throws IOException {
         try {
             ArrayList<byte[]> fileBytes=new ArrayList < byte[] > ();
-
-            //FileOutputStream fileOutputStream = new FileOutputStream(file);
             int contentLength=getContentLength(head);
             int bufferSize = Math.min(BUFFER_SIZE, contentLength);
-            if (BUFFER_SIZE < contentLength) {
-                contentLength = contentLength - BUFFER_SIZE;
-            }
             byte[] buffer = new byte[bufferSize];
             while (istream.read(buffer) != -1) {
-
                 fileBytes.add(buffer);
-                //String temp = new String(buffer, StandardCharsets.ISO_8859_1);
-
-                //response.append(temp);
-                if (istream.available() == 0)
+                contentLength-=buffer.length;
+                if(contentLength<=0)
                     break;
 
-                if (contentLength > BUFFER_SIZE) {
-                    bufferSize = BUFFER_SIZE;
-                    contentLength = contentLength - BUFFER_SIZE;
-                } else {
-                    bufferSize = contentLength;
-                }
+                bufferSize = Math.min(BUFFER_SIZE, contentLength);
                 buffer = new byte[bufferSize];
 
             }
-            //FileOutputStream fileOutputStream=new FileOutputStream(file);
-            //fileOutputStream.write(response.toString().getBytes(StandardCharsets.ISO_8859_1));
-
             return fileBytes;
         } catch (IOException e) {
             e.printStackTrace();
@@ -85,6 +79,11 @@ public class SenderAndReceiver {
         return null;
     }
 
+    /**
+     * 从流中读入头
+     * @param istream 文件读流
+     * @return 头以字符串的形式返回
+     */
     public static String receiveHeader(BufferedInputStream istream) {
         try {
             int last = 0, c = 0;
@@ -115,6 +114,11 @@ public class SenderAndReceiver {
         return null;
     }
 
+    /**
+     * 从文件名中获取文件类型
+     * @param fileName 文件名
+     * @return 文件类型
+     */
     public static String getContentType(String fileName) {
         if (fileName.endsWith(".jpg") || fileName.endsWith("jpeg")) {
             return "image/jpeg";
@@ -129,6 +133,12 @@ public class SenderAndReceiver {
             return "application/pdf";
         return "application/octet-stream";
     }
+
+    /**
+     * 从请求头中获取文件大小
+     * @param head 请求头
+     * @return 文件大小
+     */
     public static int getContentLength(String head){
         String []heads=head.split("\n");
         for(String s:heads){
@@ -138,6 +148,13 @@ public class SenderAndReceiver {
         }
         return 0;
     }
+
+    /**
+     * 从html文件中获取类型为resName的文件列表
+     * @param html html文件
+     * @param resName 类型
+     * @return 文件列表
+     */
     public static String[] getResources(String html,String resName){
         ArrayList<String> resources=new ArrayList<String> ();
         String []elem=html.split("<");
@@ -158,33 +175,5 @@ public class SenderAndReceiver {
 
         return resources.toArray(new String[0]);
     }
-
-/*
-    public static void main(String[] args) {
-        String s="<!DOCTYPE html>\n" +
-                "<html lang=\"en\" xmlns=\"http://www.w3.org/1999/html\">\n" +
-                "<head>\n" +
-                "    <meta charset=\"UTF-8\">\n" +
-                "    <title>用于测试</title>\n" +
-                "</head>\n" +
-                "<body>\n" +
-                "<h1>\n" +
-                "    这个网页是用于测试的\n" +
-                "</h1>\n" +
-                "<h2>\n" +
-                "    下一行是为了影响解析html内容的\n" +
-                "</h2>\n" +
-                "<h3>\n" +
-                "    < img src =\"f.jpg\" alt=“图片呢”>\n" +
-                "    <br>\n" +
-                "    上一行应该是文本，不应该被解析成图片\n" +
-                "    <img src= \"f.jpg\" alt=\"?\" width=\"10px\" height=\"10\"\n" +
-                "</h3>\n" +
-                "<img src=\n" +
-                "             \" f.jpg \" alt=\"图片没传过来\">\n" +
-                "</body>\n" +
-                "</html>";
-        System.out.println(Arrays.toString(getResources(s,"img")));
-    }*/
 
 }

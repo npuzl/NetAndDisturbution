@@ -1,33 +1,17 @@
 package exe2;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 
 /**
  * Class <em>Client</em> is a class representing a simple HTTP client.
  *
  * @author wben, zl
- * @version 1.0
- * @date 2020/10/09
+ * @version 3.0
+ * @date 2020/10/22
  */
 
 public class Client {
-
-    /**
-     * default HTTP port is port 80
-     */
-    private static final int port = 80;
-
-    /**
-     * Allow a maximum buffer size of 8192 bytes
-     */
-    private static final int buffer_size = 8192;
-
-    /**
-     * The end of line character sequence.
-     */
-    private static final String CRLF = "\r\n";
 
     /**
      * Input is taken from the keyboard
@@ -102,20 +86,23 @@ public class Client {
 
 
                 String filename = keyboard.readLine();
+                //先以文件名创建一个文件夹，然后把收到的文件都放到这个文件夹内
                 String dirName = filename.split("\\.")[0];
                 File dir = new File(dirName);
                 if (!dir.mkdirs()) {
-                    System.out.println("文件夹创建失败");
+                    screen.println("The directory created failed!");
                 }
 
                 File html = new File(dirName +"/"+ filename);
                 if ((!html.exists() && html.createNewFile()) || html.exists()) {
-                    /////
+                    //如果文件不存在，则创建
                     ;
                 }
+
                 FileOutputStream outfile = new FileOutputStream(html);
                 /**
                  * Save the response to the specified file.
+                 * 文件写入
                  */
                 ArrayList<byte[]> fileBytes = myClient.getFile();
                 StringBuilder response = new StringBuilder();
@@ -125,14 +112,29 @@ public class Client {
                     response.append(new String(b));
                 }
                 outfile.close();
-
+                /*
+                 * 查看html文件内有多少个img资源，并列表
+                 *
+                 */
                 String[] resources = SenderAndReceiver.getResources(response.toString(), "img");
 
                 for (String r : resources) {
+                    //对于每个资源文件都发送GET然后接受
                     //生成get
-                    String get = "GET " + r + "HTTP/1.1";
+                    String get = "GET /" + r + " HTTP/1.1";
+                    //发送GET
                     myClient.processGetRequest(get);
-                    File file = new File(dirName + "/" + r);
+                    String fileName=r;
+                    if(myClient.getHeader().contains("HTTP/1.1 400 Bad Request")){
+                        //如果某个请求头不对，则文件变为400.html
+                        fileName="400.html";
+                    }
+                    if(myClient.getHeader().contains("HTTP/1.1 404 Not Found")){
+                        //如果资源不存在，则文件变为404.html
+                        fileName="404.html";
+                    }
+                    //写入文件
+                    File file = new File(dirName + "/" + fileName);
                     if ((!file.exists() && file.createNewFile()) || file.exists()) {
                         FileOutputStream fos = new FileOutputStream(file);
                         fileBytes = myClient.getFile();

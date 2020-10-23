@@ -5,16 +5,13 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Objects;
-import java.util.Set;
-
-import static java.lang.Thread.sleep;
 
 /**
  * Class <em>HttpClient</em> is a class representing a simple HTTP client.
  *
  * @author wben, zl
- * @version 1.0
- * @date 2020/10/09
+ * @version 3.0
+ * @date 2020/10/22
  */
 
 public class HttpClient {
@@ -64,10 +61,12 @@ public class HttpClient {
     static private final String CRLF = "\r\n";
 
     /**
-     * HttpClient constructor;
+     * 请求文件以字节流数组的形式存储
      */
     private ArrayList<byte[]> requestFile = null;
-
+    /**
+     * HttpClient constructor;
+     */
     public HttpClient() {
         buffer = new byte[BUFFER_SIZE];
         header = new StringBuffer();
@@ -107,9 +106,7 @@ public class HttpClient {
         request += CRLF;
         request += "Host: 127.0.0.1" + CRLF;
         request += "Connection: keep-alive" + CRLF;
-        //request += "Upgrade-Insecure-Requests: 1" + CRLF;
         request += "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36" + CRLF;
-        //request += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9" + CRLF;
         request += CRLF;
         buffer = request.getBytes();
         ostream.write(buffer, 0, request.length());
@@ -138,16 +135,12 @@ public class HttpClient {
             path = System.getProperty("user.dir") + path;
         }
 
-
         File file = new File(path);
-
-
-        System.out.println(file.getAbsolutePath());
         if (!file.exists()) {
             System.err.println("File path ERROR!");
             return;
         }
-
+        //构建头
         request = "PUT " + Path + " HTTP/1.1" + CRLF;
         request += "Host: 127.0.0.1" + CRLF;
         request += "ContentType: " + SenderAndReceiver.getContentType(path) + CRLF;
@@ -155,14 +148,12 @@ public class HttpClient {
         request += "Connection: keep-alive" + CRLF;
         request += "Content-Length: " + file.length() + CRLF;
         request += CRLF;
-        System.out.println(request);
-
         buffer = request.getBytes(StandardCharsets.UTF_8);
         ostream.write(buffer, 0, request.length());
         ostream.flush();
         System.out.println("request send to server success!");
         if (SenderAndReceiver.sendFile(ostream, file)) {
-            System.out.println("发送文件成功");
+            System.out.println("File send successfully!");
         }
         processResponse(request);
         //=======end of your job============//
@@ -175,46 +166,16 @@ public class HttpClient {
         //如果200OK了
 
         String head;
+        //接受头
         head = SenderAndReceiver.receiveHeader(istream);
         assert head != null;
         header = new StringBuffer(head);
-        if (Objects.equals(request.split("\n")[0].split(" ")[0], "GET") || !head.contains("200 OK")) {
-            //如果是GET方法   或者  是PUT方法且没返回200 OK
+
+        if (Objects.equals(request.split("\n")[0].split(" ")[0], "GET")) {
+            //如果是GET方法，则接受文件
             requestFile = SenderAndReceiver.receiveFile(istream, head);
         }
     }
-        /*
-        int contentLength = SenderAndReceiver.getContentLength(head);
-
-        ArrayList<byte[]> responseBytes=new ArrayList<byte[]>();
-
-
-        int bufferSize = Math.min(BUFFER_SIZE, contentLength);
-        if (BUFFER_SIZE < contentLength) {
-            contentLength = contentLength - BUFFER_SIZE;
-        }
-        buffer = new byte[bufferSize];
-
-        while (istream.read(buffer) != -1) {
-
-            responseBytes.add(buffer);
-            String temp = new String(buffer, StandardCharsets.ISO_8859_1);
-            response.append(temp);
-
-            if (istream.available() == 0)
-                break;
-            if (contentLength > BUFFER_SIZE) {
-                bufferSize = BUFFER_SIZE;
-                contentLength = contentLength - BUFFER_SIZE;
-            } else {
-                bufferSize = contentLength;
-            }
-
-            buffer = new byte[bufferSize];
-        }
-        */
-
-
 
     /**
      * Get the response header.
@@ -223,6 +184,10 @@ public class HttpClient {
         return header.toString();
     }
 
+    /**
+     * 得到从服务器返回的文件
+     * @return 文件字节数组列表
+     */
     public ArrayList<byte[]> getFile() {
         return requestFile;
     }

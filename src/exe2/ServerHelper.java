@@ -6,8 +6,13 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Objects;
 
+/**
+ * 服务器功能实现类
+ * @version 3.0
+ * @author zl
+ * @date 2020/10/22
+ */
 public class ServerHelper implements Runnable {
     private static final String CRLF = "\r\n";
     private static final int BUFFER_SIZE = 8 * 1024;
@@ -25,7 +30,6 @@ public class ServerHelper implements Runnable {
      * 服务器的根目录地址 C:/../Desktop
      */
     String path;
-    int PACKET_SIZE = 8 * 1024;
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
     String remote;
     String Remote;
@@ -63,22 +67,7 @@ public class ServerHelper implements Runnable {
         try {
             initStream();
             String info;
-            /*
-            StringBuilder request = new StringBuilder();
-            byte[] buffer = new byte[PACKET_SIZE];
-
-            while (istream.read(buffer) != -1) {
-                request.append(new String(buffer, StandardCharsets.ISO_8859_1));
-                buffer = new byte[PACKET_SIZE];
-                if (istream.available() == 0)
-                    break;
-            }
-            info = request.toString();//请求头*/
             info = SenderAndReceiver.receiveHeader(istream);
-
-
-            //System.out.println(info);
-
             assert info != null;
             String[] req = info.split(" ", 2);
             switch (req[0]) {
@@ -109,48 +98,52 @@ public class ServerHelper implements Runnable {
         String filePath = path + requestPath;
 
         File file = new File(filePath);
-        //当请求400
-        if (!request.split(" ", 4)[2].contains("HTTP/1.1") &&
-                !request.split(" ", 4)[2].contains("HTTP/1.0")) {
-            try {
-                String response = "HTTP/1.1 400 Bad Request" + CRLF;
-                response += "Content-Length: 183" + CRLF;
-                response += "Content-Type: text/html; charset=iso-8859-1" + CRLF;
-                response += "Data: " + new Date().toString() + CRLF;
-                response += CRLF;
 
-                ostream.write(response.getBytes(), 0, response.length());
-                ostream.flush();
-                File file400 = new File("C:\\Users\\zl\\Desktop\\400.html");
-                if (SenderAndReceiver.sendFile(ostream, file400)) {
-                    System.out.println(df.format(new Date()) + "|| " + "400 Page send to " + Remote + "success!");
-                }
-                return;
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        //当404
-        if (!file.exists()) {
-            try {
-                String response = "HTTP/1.1 404 NotFound" + CRLF;
-                response += "Content-Length: 199" + CRLF;
-                response += "Content-Type: text/html; charset=iso-8859-1" + CRLF;
-                response += "Data: " + new Date().toString() + CRLF;
-                response += CRLF;
+        try {
 
-                ostream.write(response.getBytes(), 0, response.length());
-                ostream.flush();
-                File file404 = new File("C:\\Users\\zl\\Desktop\\404.html");
-                if (SenderAndReceiver.sendFile(ostream, file404)) {
-                    System.out.println(df.format(new Date()) + "|| " + "404Page send to " + Remote + "success!");
+
+            //当请求400
+            if (!request.split(" ", 4)[2].contains("HTTP/1.1") &&
+                    !request.split(" ", 4)[2].contains("HTTP/1.0")) {
+                try {
+                    String response = "HTTP/1.1 400 Bad Request" + CRLF;
+                    response += "Content-Length: 183" + CRLF;
+                    response += "Content-Type: text/html; charset=iso-8859-1" + CRLF;
+                    response += "Data: " + new Date().toString() + CRLF;
+                    response += CRLF;
+
+                    ostream.write(response.getBytes(), 0, response.length());
+                    ostream.flush();
+                    File file400 = new File("C:\\Users\\zl\\Desktop\\400.html");
+                    if (SenderAndReceiver.sendFile(ostream, file400)) {
+                        System.out.println(df.format(new Date()) + "|| " + "400 Page send to " + Remote + "success!");
+                    }
+                    return;
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
-        } else {
-            //正常
-            try {
+            //当404
+            if (!file.exists()) {
+                try {
+                    String response = "HTTP/1.1 404 Not Found" + CRLF;
+                    response += "Content-Length: 199" + CRLF;
+                    response += "Content-Type: text/html; charset=iso-8859-1" + CRLF;
+                    response += "Data: " + new Date().toString() + CRLF;
+                    response += CRLF;
+
+                    ostream.write(response.getBytes(), 0, response.length());
+                    ostream.flush();
+                    File file404 = new File("C:\\Users\\zl\\Desktop\\404.html");
+                    if (SenderAndReceiver.sendFile(ostream, file404)) {
+                        System.out.println(df.format(new Date()) + "|| " + "404Page send to " + Remote + "success!");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                //正常
+
                 String fileType = SenderAndReceiver.getContentType(requestPath);
                 String response = "";
                 response += "HTTP/1.1 200 OK" + CRLF;
@@ -160,14 +153,14 @@ public class ServerHelper implements Runnable {
                 response += CRLF;
                 ostream.write(response.getBytes(), 0, response.length());
                 ostream.flush();
+
                 if (SenderAndReceiver.sendFile(ostream, file)) {
                     System.out.println(df.format(new Date()) + "|| " + file.getPath() + " send to " + Remote + "success!");
                 }
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
+                run();
             }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -218,11 +211,11 @@ public class ServerHelper implements Runnable {
             System.out.println(df.format(new Date()) + "|| " + "file from " + Remote + " received success!" + "And saved in "
                     + tempPath.toString() + "/" + filePath[filePath.length - 1]);
 
-            String response = "HTTP/1.1 200 OK";
+            String response = "HTTP/1.1 200 OK"+CRLF+CRLF;
             ostream.write(response.getBytes(), 0, response.length());
             ostream.flush();
 
-
+            run();
         } catch (IOException e) {
             e.printStackTrace();
         }
